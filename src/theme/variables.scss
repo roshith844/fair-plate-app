@@ -1,2 +1,15 @@
 // For information on how to create your own theme, please refer to:
 // https://ionicframework.com/docs/theming/
+
+/* Fair Plate theme */
+:root {
+  --ion-color-primary: #C2410C;
+  --ion-color-primary-rgb: 194, 65, 12;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #AB3B0B;
+  --ion-color-primary-tint: #C8561F;
+  --ion-background-color: #F4F3EF;
+  --ion-text-color: #17181B;
+  --ion-toolbar-background: #F4F3EF;
+}
+ion-tab-bar { --background: #fff; --color-selected: #C2410C; border-top: 1px solid #E6E4DD; }

@@ -1,8 +1,12 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { TabsComponent } from './shared';
-import { BillPage, SplitItemsPage, SplitResultPage } from './split.pages';
-import { ItemEditPage, PeoplePage, PersonEditPage, ShopEditPage, ShopMenuPage, ShopsPage } from './catalog.pages';
+import { SplitResultPage } from './split-result.page';
+import { SplitItemsPage } from './split-items.page';
+import { BillPage } from './bill.page';
+import { PeoplePage, PersonEditPage } from './catalog.pages';
+import { ItemEditPage, ShopEditPage } from './forms.pages';
+import { ShopMenuPage, ShopsPage } from './shops.pages';
 
 const routes: Routes = [
   {

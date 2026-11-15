@@ -1,117 +1,78 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { resizePhoto } from './shared';
 import { Store, uid } from './store.service';
 
-
-// ---------------- Shops ----------------
-@Component({
-  selector: 'app-shops', standalone: false,
-  template: `<ion-header><ion-toolbar><ion-title>Shops</ion-title>
-    <ion-buttons slot="end"><ion-button routerLink="/shop-edit"><ion-icon slot="start" name="add"></ion-icon>Add shop</ion-button></ion-buttons></ion-toolbar></ion-header>
-  <ion-content>
-    @if (!s.shops.length) { <p class="ion-padding">No shops yet. Add your first shop, then its menu.</p> }
-    <ion-list>@for (sh of s.shops; track sh.id) {
-      <ion-item [routerLink]="['/shop', sh.id]" detail><ion-label>{{ sh.name }}<p>{{ s.shopItems(sh.id).length }} items</p></ion-label></ion-item>
-    }</ion-list></ion-content>`,
-})
-export class ShopsPage { constructor(public s: Store) {} }
-
-@Component({
-  selector: 'app-shop-edit', standalone: false,
-  template: `<ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/tabs/shops"></ion-back-button></ion-buttons><ion-title>{{ id ? 'Edit shop' : 'New shop' }}</ion-title></ion-toolbar></ion-header>
-  <ion-content class="ion-padding">
-    <ion-item><ion-input label="Shop name" labelPlacement="stacked" [(ngModel)]="name"></ion-input></ion-item>
-    <ion-button expand="block" class="ion-margin-top" [disabled]="!name.trim()" (click)="save()">Save shop</ion-button>
-    @if (id) { <ion-button expand="block" fill="clear" color="danger" (click)="del()">Delete shop and its items</ion-button> }
-  </ion-content>`,
-})
-export class ShopEditPage {
-  id = this.r.snapshot.paramMap.get('id') || '';
-  name = this.s.shop(this.id)?.name || '';
-  constructor(private s: Store, private r: ActivatedRoute, private nav: Router) {}
-  async save() {
-    const id = this.id || uid();
-    await this.s.saveShop({ id, name: this.name.trim() });
-    this.nav.navigate(this.id ? ['/shop', id] : ['/shop', id], { replaceUrl: true });
-  }
-  async del() { await this.s.deleteShop(this.id); this.nav.navigate(['/tabs/shops'], { replaceUrl: true }); }
-}
-
-@Component({
-  selector: 'app-shop-menu', standalone: false,
-  template: `<ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/tabs/shops"></ion-back-button></ion-buttons><ion-title>{{ s.shop(id)?.name }}</ion-title>
-    <ion-buttons slot="end"><ion-button [routerLink]="['/shop-edit', id]">Rename</ion-button></ion-buttons></ion-toolbar></ion-header>
-  <ion-content>
-    <ion-button expand="block" class="ion-margin" [routerLink]="['/item-edit', id]"><ion-icon slot="start" name="add"></ion-icon>Add item</ion-button>
-    <ion-list>@for (i of s.shopItems(id); track i.id) {
-      <ion-item [routerLink]="['/item-edit', id, i.id]" detail>
-        <app-avatar slot="start" [name]="i.name" [photo]="i.photo"></app-avatar>
-        <ion-label>{{ i.name }}</ion-label><ion-note slot="end">₹{{ i.price }}</ion-note></ion-item>
-    }</ion-list>
-    @if (!s.shopItems(id).length) { <p class="ion-padding">No items yet.</p> }
-  </ion-content>`,
-})
-export class ShopMenuPage {
-  id = this.r.snapshot.paramMap.get('id')!;
-  constructor(public s: Store, private r: ActivatedRoute) {}
-}
-
-@Component({
-  selector: 'app-item-edit', standalone: false,
-  template: `<ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/tabs/shops"></ion-back-button></ion-buttons><ion-title>{{ id ? 'Edit item' : 'New item' }}</ion-title></ion-toolbar></ion-header>
-  <ion-content class="ion-padding">
-    <app-photo-picker [name]="name" [photo]="photo" (photoChange)="photo = $event"></app-photo-picker>
-    <ion-item><ion-input label="Item name" labelPlacement="stacked" [(ngModel)]="name"></ion-input></ion-item>
-    <ion-item><ion-input label="Price (₹, one serving)" labelPlacement="stacked" type="number" inputmode="decimal" [(ngModel)]="price"></ion-input></ion-item>
-    <ion-button expand="block" class="ion-margin-top" [disabled]="!ok()" (click)="save(false)">Save item</ion-button>
-    @if (!id) { <ion-button expand="block" fill="outline" [disabled]="!ok()" (click)="save(true)">Save and add another</ion-button> }
-    @if (id) { <ion-button expand="block" fill="clear" color="danger" (click)="del()">Delete item</ion-button> }
-  </ion-content>`,
-})
-export class ItemEditPage {
-  shopId = this.r.snapshot.paramMap.get('shopId')!;
-  id = this.r.snapshot.paramMap.get('id') || '';
-  name = this.s.item(this.id)?.name || '';
-  price: number | null = this.s.item(this.id)?.price ?? null;
-  photo = this.s.item(this.id)?.photo;
-  constructor(private s: Store, private r: ActivatedRoute, private nav: Router) {}
-  ok() { return !!this.name.trim() && this.price !== null && +this.price >= 0; }
-  async save(another: boolean) {
-    await this.s.saveItem({ id: this.id || uid(), shopId: this.shopId, name: this.name.trim(), price: +this.price!, photo: this.photo });
-    if (another) { this.name = ''; this.price = null; this.photo = undefined; }
-    else this.nav.navigate(['/shop', this.shopId], { replaceUrl: true });
-  }
-  async del() { await this.s.deleteItem(this.id); this.nav.navigate(['/shop', this.shopId], { replaceUrl: true }); }
-}
-
-// ---------------- People ----------------
+// ---------------- People list ----------------
 @Component({
   selector: 'app-people', standalone: false,
-  template: `<ion-header><ion-toolbar><ion-title>People</ion-title>
-    <ion-buttons slot="end"><ion-button routerLink="/person-edit"><ion-icon slot="start" name="add"></ion-icon>Add person</ion-button></ion-buttons></ion-toolbar></ion-header>
-  <ion-content><ion-list>@for (p of s.people; track p.id) {
-    <ion-item [routerLink]="['/person-edit', p.id]" detail><app-avatar slot="start" [name]="p.name" [photo]="p.photo"></app-avatar><ion-label>{{ p.name }}</ion-label></ion-item>
-  }</ion-list></ion-content>`,
+  template: `<ion-content>
+    <div class="top"><h1>People</h1><button class="pill" routerLink="/person-edit"><ion-icon name="add"></ion-icon>Add person</button></div>
+    <p class="count">{{ s.people.length }} people</p>
+    <div class="list">
+      @for (p of s.people; track p.id) {
+        <a class="row" [routerLink]="['/person-edit', p.id]">
+          <app-avatar [name]="p.name" [photo]="p.photo" [size]="48"></app-avatar>
+          <span class="nm">{{ p.name }}</span><ion-icon name="chevron-forward"></ion-icon>
+        </a>
+      }
+    </div>
+  </ion-content>`,
+  styles: [`
+    .top{display:flex;align-items:center;justify-content:space-between;padding:52px 20px 0}.top h1{margin:0;font-size:30px;font-weight:700}
+    .pill{height:44px;padding:0 18px 0 14px;border-radius:22px;background:#17181B;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;border:0}.pill ion-icon{font-size:20px}
+    .count{margin:12px 24px 8px;font-size:13px;font-weight:500;color:#5C5F66}
+    .list{margin:0 20px;background:#fff;border:1px solid #E6E4DD;border-radius:20px;overflow:hidden}
+    .row{display:flex;align-items:center;gap:14px;padding:10px 16px;min-height:68px;color:#17181B;text-decoration:none}.row+.row{border-top:1px solid #EFEDE6}
+    .nm{flex:1;font-size:17px;font-weight:600}.row ion-icon{color:#5C5F66}
+  `],
 })
 export class PeoplePage { constructor(public s: Store) {} }
 
+// ---------------- Add / edit person ----------------
 @Component({
   selector: 'app-person-edit', standalone: false,
-  template: `<ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/tabs/people"></ion-back-button></ion-buttons><ion-title>{{ id ? 'Edit person' : 'New person' }}</ion-title></ion-toolbar></ion-header>
-  <ion-content class="ion-padding">
-    <app-photo-picker [name]="name" [photo]="photo" (photoChange)="photo = $event"></app-photo-picker>
-    <ion-item><ion-input label="Name" labelPlacement="stacked" [(ngModel)]="name"></ion-input></ion-item>
-    <ion-button expand="block" class="ion-margin-top" [disabled]="!name.trim()" (click)="save()">Save person</ion-button>
-    @if (id) { <ion-button expand="block" fill="clear" color="danger" (click)="del()">Delete person</ion-button> }
-  </ion-content>`,
+  template: `<ion-content>
+    <div class="top"><button class="ib" aria-label="Cancel" (click)="close()"><ion-icon name="close"></ion-icon></button>
+      <h1>{{ id ? 'Edit person' : 'New person' }}</h1><span class="sp"></span></div>
+    <main>
+      <div class="pic">
+        <div class="av"><app-avatar [name]="name" [photo]="photo" [size]="140"></app-avatar>
+          <button class="cam" aria-label="Add photo" (click)="f.click()"><ion-icon name="camera-outline"></ion-icon></button></div>
+        <input #f type="file" accept="image/*" hidden (change)="pick($event)" />
+        <span class="hint">No photo? Their first letter is used instead.</span>
+      </div>
+      <div class="fld"><label for="n">Name</label><input id="n" class="in" type="text" [(ngModel)]="name" /></div>
+      @if (id) { <button class="del" (click)="del()">Delete person</button> }
+    </main>
+  </ion-content>
+  <ion-footer><div class="foot"><button class="dark" [disabled]="!name.trim()" (click)="save()">Save person</button></div></ion-footer>`,
+  styles: [`
+    .top{display:flex;align-items:center;justify-content:space-between;padding:52px 20px 0}.top h1{margin:0;font-size:18px;font-weight:600}.sp{width:44px}
+    .ib{width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid #E6E4DD;font-size:20px;display:grid;place-items:center}
+    main{display:flex;flex-direction:column;gap:22px;padding:24px 20px}
+    .pic{display:flex;flex-direction:column;align-items:center;gap:14px}.av{position:relative;width:140px;height:140px}
+    .cam{position:absolute;right:-2px;bottom:-2px;width:48px;height:48px;border-radius:50%;border:3px solid #F4F3EF;background:#17181B;color:#fff;font-size:20px;display:grid;place-items:center}
+    .hint{font-size:13px;color:#5C5F66}
+    .fld{display:flex;flex-direction:column;gap:8px}label{font-size:13px;font-weight:600;color:#5C5F66}
+    .in{height:52px;padding:0 16px;border:1px solid #D9D6CC;border-radius:14px;background:#fff;font-size:16px;color:#17181B;outline:0;width:100%}.in:focus{border:2px solid #17181B;padding:0 15px}
+    .foot{padding:12px 20px 28px;background:#F4F3EF}
+    .dark{width:100%;height:56px;border:0;border-radius:28px;background:#17181B;color:#fff;font-size:16px;font-weight:600}.dark:disabled{opacity:.4}
+    .del{background:none;border:0;color:#B91C1C;font-size:14px;font-weight:600;padding:8px}
+  `],
 })
 export class PersonEditPage {
   id = this.r.snapshot.paramMap.get('id') || '';
   name = this.s.person(this.id)?.name || '';
   photo = this.s.person(this.id)?.photo;
   constructor(private s: Store, private r: ActivatedRoute, private nav: Router) {}
+  close() { this.nav.navigate(['/tabs/people']); }
+  async pick(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) this.photo = await resizePhoto(file);
+  }
   async save() { await this.s.savePerson({ id: this.id || uid(), name: this.name.trim(), photo: this.photo }); this.nav.navigate(['/tabs/people'], { replaceUrl: true }); }
   async del() { await this.s.deletePerson(this.id); this.nav.navigate(['/tabs/people'], { replaceUrl: true }); }
 }
 
-export const CATALOG = [ShopsPage, ShopEditPage, ShopMenuPage, ItemEditPage, PeoplePage, PersonEditPage];
+export const CATALOG = [PeoplePage, PersonEditPage];
